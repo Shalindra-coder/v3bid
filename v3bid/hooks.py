@@ -166,6 +166,18 @@ app_license = "mit"
 # 	],
 # }
 
+
+scheduler_events = {
+    "cron": {
+        "*/1 * * * *": [  
+            "v3bid.v3bid.custom_email_send.custom_send_email_to_leads_or_contacts_mail"
+
+        ]
+    }
+}
+
+
+
 # Testing
 # -------
 
@@ -241,4 +253,21 @@ app_license = "mit"
 # default_log_clearing_doctypes = {
 # 	"Logging DocType Name": 30  # days to retain logs
 # }
+
+fixtures = [
+    {
+        "doctype": "Custom Field",
+        "filters": [
+            ["dt", "in", ["Email Campaign"]]
+        ]
+    }
+]
+
+
+import v3bid.v3bid.custom_email_send
+
+
+
+ 
+
 
