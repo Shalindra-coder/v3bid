@@ -4,12 +4,11 @@ from frappe.core.doctype.communication.email import make
 import erpnext.crm.doctype.email_campaign.email_campaign as email_campaign_module
 
 
-
 from datetime import datetime, timedelta
-from frappe.utils import getdate, today, add_days
+from frappe.utils import getdate, today, add_days, now_datetime
 
 def custom_send_email_to_leads_or_contacts_mail():
-    now = datetime.now()
+    now = now_datetime()  
     print(f"Custom send_email_to_leads_or_contacts running at {now} --------------------")
 
     email_campaigns = frappe.get_all(
@@ -20,41 +19,33 @@ def custom_send_email_to_leads_or_contacts_mail():
     for camp in email_campaigns:
         email_campaign = frappe.get_doc("Email Campaign", camp.name)
 
-        # Check if today is within start_date and end_date
         if email_campaign.start_date <= getdate(today()) <= email_campaign.end_date:
-
-            # Ensure custom_time exists
             if hasattr(email_campaign, "custom_time") and email_campaign.custom_time:
                 campaign_time = email_campaign.custom_time
 
-                # Convert timedelta or string to datetime
                 if isinstance(campaign_time, timedelta):
-                    campaign_datetime = datetime.combine(datetime.today(), datetime.min.time()) + campaign_time
+                    campaign_datetime = datetime.combine(now.date(), datetime.min.time()) + campaign_time
                 elif isinstance(campaign_time, str):
                     h, m, s = map(int, campaign_time.split(":"))
-                    campaign_datetime = datetime.combine(datetime.today(), datetime.min.time()) + timedelta(hours=h, minutes=m, seconds=s)
+                    campaign_datetime = datetime.combine(now.date(), datetime.min.time()) + timedelta(hours=h, minutes=m, seconds=s)
                 else:
                     print(f"Unknown type for custom_time in {email_campaign.name}")
                     continue
 
-                # Execute campaign if current time is ±1 minute of custom_time
                 if abs((now - campaign_datetime).total_seconds()) < 60:
                     print(f"Executing campaign: {email_campaign.name} at {now}")
 
-                    # Call custom_send_mail for each schedule
                     campaign = frappe.get_cached_doc("Campaign", email_campaign.campaign_name)
                     for entry in campaign.get("campaign_schedules"):
                         scheduled_date = add_days(email_campaign.get("start_date"), entry.get("send_after_days"))
                         if scheduled_date == getdate(today()):
                             custom_send_mail(entry, email_campaign)
-
                 else:
                     print(f"Skipped campaign {email_campaign.name} (Scheduled at {campaign_datetime.time()})")
             else:
                 print(f"Campaign {email_campaign.name} has no custom_time set.")
         else:
             print(f"Campaign {email_campaign.name} skipped (Out of Date Range)")
-
 
 
 def custom_send_mail(entry, email_campaign):
@@ -115,5 +106,3 @@ def custom_send_email_to_leads_or_contacts():
 setattr(email_campaign_module, "send_email_to_leads_or_contacts", custom_send_email_to_leads_or_contacts)
 
 setattr(email_campaign_module, "send_mail", custom_send_mail)
-
-
