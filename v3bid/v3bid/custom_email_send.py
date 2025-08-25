@@ -3,12 +3,12 @@ import frappe
 from frappe.core.doctype.communication.email import make
 import erpnext.crm.doctype.email_campaign.email_campaign as email_campaign_module
 
-
 from datetime import datetime, timedelta
 from frappe.utils import getdate, today, add_days, now_datetime
 
+
 def custom_send_email_to_leads_or_contacts_mail():
-    now = now_datetime()  
+    now = now_datetime()
     print(f"Custom send_email_to_leads_or_contacts running at {now} --------------------")
 
     email_campaigns = frappe.get_all(
@@ -27,7 +27,9 @@ def custom_send_email_to_leads_or_contacts_mail():
                     campaign_datetime = datetime.combine(now.date(), datetime.min.time()) + campaign_time
                 elif isinstance(campaign_time, str):
                     h, m, s = map(int, campaign_time.split(":"))
-                    campaign_datetime = datetime.combine(now.date(), datetime.min.time()) + timedelta(hours=h, minutes=m, seconds=s)
+                    campaign_datetime = datetime.combine(now.date(), datetime.min.time()) + timedelta(
+                        hours=h, minutes=m, seconds=s
+                    )
                 else:
                     print(f"Unknown type for custom_time in {email_campaign.name}")
                     continue
@@ -36,8 +38,13 @@ def custom_send_email_to_leads_or_contacts_mail():
                     print(f"Executing campaign: {email_campaign.name} at {now}")
 
                     campaign = frappe.get_cached_doc("Campaign", email_campaign.campaign_name)
+
                     for entry in campaign.get("campaign_schedules"):
-                        scheduled_date = add_days(email_campaign.get("start_date"), entry.get("send_after_days"))
+                        # Handle both dict and object types
+                        send_after_days = entry.get("send_after_days") if hasattr(entry, "get") else entry.send_after_days
+
+                        scheduled_date = add_days(email_campaign.get("start_date"), send_after_days)
+
                         if scheduled_date == getdate(today()):
                             custom_send_mail(entry, email_campaign)
                 else:
@@ -49,9 +56,7 @@ def custom_send_email_to_leads_or_contacts_mail():
 
 
 def custom_send_mail(entry, email_campaign):
-    
-    print("custom_this is send mail methods------------------------------------------------------")
-     
+    # print("custom_this is send mail methods------------------------------------------------------")
 
     recipient_list = []
     if email_campaign.email_campaign_for == "Email Group":
@@ -70,7 +75,9 @@ def custom_send_mail(entry, email_campaign):
         if recipient:
             recipient_list.append(recipient)
 
-    email_template = frappe.get_doc("Email Template", entry.get("email_template"))
+    # Handle both dict and object types for entry
+    email_template_name = entry.get("email_template") if hasattr(entry, "get") else entry.email_template
+    email_template = frappe.get_doc("Email Template", email_template_name)
     sender = frappe.db.get_value("User", email_campaign.get("sender"), "email")
 
     # Loop through each recipient and send mail individually
@@ -95,14 +102,10 @@ def custom_send_mail(entry, email_campaign):
     return "All mails sent successfully"
 
 
-
-
 def custom_send_email_to_leads_or_contacts():
-    # frappe.log_error("this is custom mehtods email ------------------------------------------------------------")
-    print("this custom method running ----------------------------------------------------------------------")
-    
+    # print("this custom method running ----------------------------------------------------------------------")
     return
 
-setattr(email_campaign_module, "send_email_to_leads_or_contacts", custom_send_email_to_leads_or_contacts)
 
+setattr(email_campaign_module, "send_email_to_leads_or_contacts", custom_send_email_to_leads_or_contacts)
 setattr(email_campaign_module, "send_mail", custom_send_mail)
